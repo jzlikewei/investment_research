@@ -33,7 +33,7 @@ def load_all_results():
 
 
 def calculate_metrics(df, strategy_name):
-    """计算策略指标"""
+    """计算策略指标（含索提诺比率）"""
     
     days = (df.index[-1] - df.index[0]).days
     years = days / 365.25
@@ -50,6 +50,14 @@ def calculate_metrics(df, strategy_name):
     volatility = daily_returns.std() * np.sqrt(252) * 100
     sharpe_ratio = (annualized_return / 100 - 0.03) / (volatility / 100)
     
+    # 索提诺比率 - 只考虑下行风险
+    downside_returns = daily_returns[daily_returns < 0]
+    if len(downside_returns) > 0:
+        downside_std = downside_returns.std() * np.sqrt(252) * 100
+        sortino_ratio = (annualized_return / 100 - 0.03) / (downside_std / 100)
+    else:
+        sortino_ratio = float('inf')
+    
     return {
         'name': strategy_name,
         'total_return': df['return'].iloc[-1],
@@ -57,6 +65,8 @@ def calculate_metrics(df, strategy_name):
         'max_drawdown': max_drawdown,
         'volatility': volatility,
         'sharpe_ratio': sharpe_ratio,
+        'sortino_ratio': sortino_ratio,
+        'downside_volatility': downside_std if len(downside_returns) > 0 else 0,
         'final_value': final_value,
         'total_profit': df['profit'].iloc[-1],
         'years': years
@@ -367,6 +377,8 @@ def generate_html(results):
                             <th>年化收益率</th>
                             <th>最大回撤</th>
                             <th>夏普比率</th>
+                            <th>索提诺比率</th>
+                            <th>下行波动</th>
                             <th>操作次数</th>
                         </tr>
                     </thead>
@@ -382,18 +394,25 @@ def generate_html(results):
         '含债阈值再平衡': {'rebalance': 8}
     }
     
+    # 找出最优索提诺比率
+    best_sortino = max([m['sortino_ratio'] for m in all_metrics])
+    
     for metrics in all_metrics:
         name = metrics['name']
         rebalance_count = strategy_info.get(name, {}).get('rebalance', 0)
         
-        # 找出最优值并标记
+        # 标记最优值
+        sortino_class = 'best' if metrics['sortino_ratio'] == best_sortino else ''
+        
         html += f"""
                         <tr>
                             <td><strong>{name}</strong></td>
                             <td>{metrics['total_return']:.2f}%</td>
                             <td>{metrics['annualized_return']:.2f}%</td>
                             <td>{metrics['max_drawdown']:.2f}%</td>
-                            <td class="best">{metrics['sharpe_ratio']:.3f}</td>
+                            <td>{metrics['sharpe_ratio']:.3f}</td>
+                            <td class="{sortino_class}">{metrics['sortino_ratio']:.3f}</td>
+                            <td>{metrics['downside_volatility']:.2f}%</td>
                             <td>{rebalance_count}次</td>
                         </tr>
 """
@@ -401,6 +420,19 @@ def generate_html(results):
     html += """
                     </tbody>
                 </table>
+                
+                <div style="background: #f8f9fa; padding: 20px; border-radius: 12px; margin: 30px 0;">
+                    <h3 style="color: #667eea; margin-bottom: 15px;">💡 什么是索提诺比率？</h3>
+                    <p style="line-height: 1.8; color: #666;">
+                        <strong>索提诺比率（Sortino Ratio）</strong>是改进版的夏普比率，只考虑<strong>下行风险</strong>（亏损的波动），
+                        而不惩罚上涨的波动。这更符合投资者的真实感受，因为我们真正害怕的是亏损，而不是盈利波动。
+                    </p>
+                    <p style="line-height: 1.8; color: #666; margin-top: 10px;">
+                        <strong>公式</strong>: (年化收益率 - 3%) / 下行波动率<br>
+                        <strong>意义</strong>: 每承担1单位<strong>亏损风险</strong>，能获得多少超额收益<br>
+                        <strong>数值越高越好</strong>: 说明用较小的亏损风险获得了较高收益
+                    </p>
+                </div>
                 
                 <h3 style="margin: 40px 0 20px 0; color: #667eea;">净值走势对比</h3>
                 <div class="chart-container">
@@ -451,7 +483,17 @@ def generate_html(results):
                     <div class="metric-card">
                         <h3>夏普比率</h3>
                         <div class="value">{metrics['sharpe_ratio']:.3f}</div>
-                        <div class="sub">风险调整后收益</div>
+                        <div class="sub">综合风险调整收益</div>
+                    </div>
+                    <div class="metric-card">
+                        <h3>索提诺比率</h3>
+                        <div class="value">{metrics['sortino_ratio']:.3f}</div>
+                        <div class="sub">下行风险调整收益</div>
+                    </div>
+                    <div class="metric-card">
+                        <h3>下行波动率</h3>
+                        <div class="value">{metrics['downside_volatility']:.2f}%</div>
+                        <div class="sub">只计算亏损风险</div>
                     </div>
                 </div>
                 

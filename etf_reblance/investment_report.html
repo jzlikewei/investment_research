@@ -226,7 +226,7 @@
         <div class="header">
             <h1>📊 ETF投资组合回测分析报告</h1>
             <p>2015年1月 - 2025年10月 | 初始资金100万 | 定投2年</p>
-            <p style="margin-top: 10px; font-size: 0.9em;">生成时间: 2025-10-30 20:10:35</p>
+            <p style="margin-top: 10px; font-size: 0.9em;">生成时间: 2025-10-30 20:34:43</p>
         </div>
         
         <div class="nav">
@@ -250,6 +250,8 @@
                             <th>年化收益率</th>
                             <th>最大回撤</th>
                             <th>夏普比率</th>
+                            <th>索提诺比率</th>
+                            <th>下行波动</th>
                             <th>操作次数</th>
                         </tr>
                     </thead>
@@ -260,7 +262,9 @@
                             <td>272.89%</td>
                             <td>12.96%</td>
                             <td>-22.33%</td>
-                            <td class="best">0.604</td>
+                            <td>0.604</td>
+                            <td class="">0.764</td>
+                            <td>13.04%</td>
                             <td>0次</td>
                         </tr>
 
@@ -269,7 +273,9 @@
                             <td>264.82%</td>
                             <td>12.73%</td>
                             <td>-21.67%</td>
-                            <td class="best">0.611</td>
+                            <td>0.611</td>
+                            <td class="">0.775</td>
+                            <td>12.56%</td>
                             <td>17次</td>
                         </tr>
 
@@ -278,7 +284,9 @@
                             <td>272.56%</td>
                             <td>12.95%</td>
                             <td>-20.34%</td>
-                            <td class="best">0.628</td>
+                            <td>0.628</td>
+                            <td class="best">0.800</td>
+                            <td>12.43%</td>
                             <td>5次</td>
                         </tr>
 
@@ -287,7 +295,9 @@
                             <td>250.27%</td>
                             <td>12.31%</td>
                             <td>-20.48%</td>
-                            <td class="best">0.612</td>
+                            <td>0.612</td>
+                            <td class="">0.779</td>
+                            <td>11.94%</td>
                             <td>0次</td>
                         </tr>
 
@@ -296,12 +306,27 @@
                             <td>239.79%</td>
                             <td>11.99%</td>
                             <td>-19.51%</td>
-                            <td class="best">0.625</td>
+                            <td>0.625</td>
+                            <td class="">0.799</td>
+                            <td>11.25%</td>
                             <td>8次</td>
                         </tr>
 
                     </tbody>
                 </table>
+                
+                <div style="background: #f8f9fa; padding: 20px; border-radius: 12px; margin: 30px 0;">
+                    <h3 style="color: #667eea; margin-bottom: 15px;">💡 什么是索提诺比率？</h3>
+                    <p style="line-height: 1.8; color: #666;">
+                        <strong>索提诺比率（Sortino Ratio）</strong>是改进版的夏普比率，只考虑<strong>下行风险</strong>（亏损的波动），
+                        而不惩罚上涨的波动。这更符合投资者的真实感受，因为我们真正害怕的是亏损，而不是盈利波动。
+                    </p>
+                    <p style="line-height: 1.8; color: #666; margin-top: 10px;">
+                        <strong>公式</strong>: (年化收益率 - 3%) / 下行波动率<br>
+                        <strong>意义</strong>: 每承担1单位<strong>亏损风险</strong>，能获得多少超额收益<br>
+                        <strong>数值越高越好</strong>: 说明用较小的亏损风险获得了较高收益
+                    </p>
+                </div>
                 
                 <h3 style="margin: 40px 0 20px 0; color: #667eea;">净值走势对比</h3>
                 <div class="chart-container">
@@ -344,7 +369,17 @@
                     <div class="metric-card">
                         <h3>夏普比率</h3>
                         <div class="value">0.604</div>
-                        <div class="sub">风险调整后收益</div>
+                        <div class="sub">综合风险调整收益</div>
+                    </div>
+                    <div class="metric-card">
+                        <h3>索提诺比率</h3>
+                        <div class="value">0.764</div>
+                        <div class="sub">下行风险调整收益</div>
+                    </div>
+                    <div class="metric-card">
+                        <h3>下行波动率</h3>
+                        <div class="value">13.04%</div>
+                        <div class="sub">只计算亏损风险</div>
                     </div>
                 </div>
                 
@@ -444,7 +479,17 @@
                     <div class="metric-card">
                         <h3>夏普比率</h3>
                         <div class="value">0.611</div>
-                        <div class="sub">风险调整后收益</div>
+                        <div class="sub">综合风险调整收益</div>
+                    </div>
+                    <div class="metric-card">
+                        <h3>索提诺比率</h3>
+                        <div class="value">0.775</div>
+                        <div class="sub">下行风险调整收益</div>
+                    </div>
+                    <div class="metric-card">
+                        <h3>下行波动率</h3>
+                        <div class="value">12.56%</div>
+                        <div class="sub">只计算亏损风险</div>
                     </div>
                 </div>
                 
@@ -544,7 +589,17 @@
                     <div class="metric-card">
                         <h3>夏普比率</h3>
                         <div class="value">0.628</div>
-                        <div class="sub">风险调整后收益</div>
+                        <div class="sub">综合风险调整收益</div>
+                    </div>
+                    <div class="metric-card">
+                        <h3>索提诺比率</h3>
+                        <div class="value">0.800</div>
+                        <div class="sub">下行风险调整收益</div>
+                    </div>
+                    <div class="metric-card">
+                        <h3>下行波动率</h3>
+                        <div class="value">12.43%</div>
+                        <div class="sub">只计算亏损风险</div>
                     </div>
                 </div>
                 
@@ -644,7 +699,17 @@
                     <div class="metric-card">
                         <h3>夏普比率</h3>
                         <div class="value">0.612</div>
-                        <div class="sub">风险调整后收益</div>
+                        <div class="sub">综合风险调整收益</div>
+                    </div>
+                    <div class="metric-card">
+                        <h3>索提诺比率</h3>
+                        <div class="value">0.779</div>
+                        <div class="sub">下行风险调整收益</div>
+                    </div>
+                    <div class="metric-card">
+                        <h3>下行波动率</h3>
+                        <div class="value">11.94%</div>
+                        <div class="sub">只计算亏损风险</div>
                     </div>
                 </div>
                 
@@ -755,7 +820,17 @@
                     <div class="metric-card">
                         <h3>夏普比率</h3>
                         <div class="value">0.625</div>
-                        <div class="sub">风险调整后收益</div>
+                        <div class="sub">综合风险调整收益</div>
+                    </div>
+                    <div class="metric-card">
+                        <h3>索提诺比率</h3>
+                        <div class="value">0.799</div>
+                        <div class="sub">下行风险调整收益</div>
+                    </div>
+                    <div class="metric-card">
+                        <h3>下行波动率</h3>
+                        <div class="value">11.25%</div>
+                        <div class="sub">只计算亏损风险</div>
                     </div>
                 </div>
                 
