@@ -56,6 +56,19 @@ def process_csi_index(filepath, index_name):
     # 根据列名判断数据格式
     if '日期Date' in df.columns:
         # 930955格式：日期是数字格式 20100104
+        # 注意：可能包含多个指数代码（如930955和H20955），只保留主代码
+        if '指数代码Index Code' in df.columns:
+            # 获取最常见的指数代码
+            main_code = df['指数代码Index Code'].value_counts().index[0]
+            # 如果有多个代码，优先选择数字开头的（如930955而不是H20955）
+            unique_codes = df['指数代码Index Code'].unique()
+            numeric_codes = [c for c in unique_codes if str(c)[0].isdigit()]
+            if len(numeric_codes) > 0:
+                main_code = numeric_codes[0]
+            
+            df = df[df['指数代码Index Code'] == main_code]
+            print(f"   使用指数代码: {main_code}")
+        
         df_clean = pd.DataFrame({
             'Date': pd.to_datetime(df['日期Date'].astype(str), format='%Y%m%d'),
             'Open': pd.to_numeric(df['开盘Open'], errors='coerce'),
