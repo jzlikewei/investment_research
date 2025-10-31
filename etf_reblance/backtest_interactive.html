@@ -581,9 +581,13 @@
                                 rebalanceLog.push({ date, reasons: reasons.join(', ') });
                             }
                         } else if (config.rebalanceMode === 'periodic') {
-                            // 定期再平衡（简化实现：每N个月）
-                            const monthsSinceInvest = (currentDate - investEndDate) / (1000 * 60 * 60 * 24 * 30);
-                            if (monthsSinceInvest > 0 && monthsSinceInvest % config.rebalanceMonths < 0.5) {
+                            // 定期再平衡
+                            // 计算距离定投结束的天数
+                            const daysSinceInvest = Math.floor((currentDate - investEndDate) / (1000 * 60 * 60 * 24));
+                            const rebalanceDays = config.rebalanceMonths * 30;
+                            
+                            // 检查是否到了再平衡日（每N个月的第一天）
+                            if (daysSinceInvest > 0 && daysSinceInvest % rebalanceDays === 0) {
                                 const totalValue = Object.keys(shares).reduce((sum, key) => {
                                     return config.weights[key] > 0 ? 
                                         sum + shares[key] * filteredData[key][i].Close : sum;
@@ -595,6 +599,10 @@
                                         shares[key] = targetValue / filteredData[key][i].Close;
                                     }
                                 }
+                                rebalanceLog.push({ 
+                                    date, 
+                                    reasons: `定期再平衡（第${Math.floor(daysSinceInvest/rebalanceDays)}次）` 
+                                });
                             }
                         }
                     }
