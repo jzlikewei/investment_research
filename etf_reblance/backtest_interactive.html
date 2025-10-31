@@ -233,6 +233,131 @@
             margin: 20px 0;
             border-radius: 8px;
         }
+        
+        .history-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 1000;
+            overflow-y: auto;
+            padding: 20px;
+        }
+        
+        .history-modal.show {
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+        }
+        
+        .history-content {
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            max-width: 1000px;
+            width: 100%;
+            margin: 50px 0;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+        
+        .history-item {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 12px;
+            margin: 15px 0;
+            border: 2px solid transparent;
+            transition: all 0.3s;
+        }
+        
+        .history-item:hover {
+            border-color: #667eea;
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.2);
+        }
+        
+        .history-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        
+        .history-title {
+            font-size: 18px;
+            font-weight: bold;
+            color: #333;
+        }
+        
+        .history-time {
+            font-size: 14px;
+            color: #666;
+        }
+        
+        .history-config {
+            font-size: 14px;
+            color: #666;
+            margin: 5px 0;
+        }
+        
+        .history-metrics {
+            display: flex;
+            gap: 20px;
+            margin-top: 10px;
+            flex-wrap: wrap;
+        }
+        
+        .history-metric {
+            font-size: 14px;
+        }
+        
+        .history-metric strong {
+            color: #667eea;
+        }
+        
+        .history-actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+        }
+        
+        .btn-small {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.3s;
+        }
+        
+        .btn-load {
+            background: #667eea;
+            color: white;
+        }
+        
+        .btn-load:hover {
+            background: #5568d3;
+        }
+        
+        .btn-delete {
+            background: #dc3545;
+            color: white;
+        }
+        
+        .btn-delete:hover {
+            background: #c82333;
+        }
+        
+        .btn-close {
+            background: #6c757d;
+            color: white;
+        }
+        
+        .btn-close:hover {
+            background: #5a6268;
+        }
     </style>
 </head>
 <body>
@@ -240,6 +365,12 @@
         <div class="header">
             <h1>🎯 ETF投资组合回测工具</h1>
             <p>自定义配置 · 智能回测 · 实时结果</p>
+        </div>
+        
+        <div style="background: #f8f9fa; padding: 15px 40px; border-bottom: 1px solid #dee2e6;">
+            <button class="nav-btn" onclick="showHistory()" id="historyBtn" style="background: white; border: 2px solid #667eea; padding: 10px 20px; border-radius: 8px; cursor: pointer; font-size: 14px;">
+                📚 历史记录
+            </button>
         </div>
         
         <div class="content">
@@ -371,11 +502,184 @@
         </div>
     </div>
     
+    <!-- 历史记录模态框 -->
+    <div id="historyModal" class="history-modal">
+        <div class="history-content">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px;">
+                <h2 style="color: #667eea;">📚 回测历史记录</h2>
+                <button class="btn-small btn-close" onclick="closeHistory()">关闭</button>
+            </div>
+            
+            <div id="historyList">
+                <!-- 历史记录列表将动态生成 -->
+            </div>
+            
+            <div id="noHistory" style="text-align: center; padding: 40px; color: #999; display: none;">
+                <p style="font-size: 18px;">📭 暂无历史记录</p>
+                <p style="margin-top: 10px;">完成第一次回测后，记录会自动保存在这里</p>
+            </div>
+        </div>
+    </div>
+    
     <script>
         // 全局变量
         let dataCache = {};
         let currentChart1 = null;
         let currentChart2 = null;
+        let currentResult = null;
+        
+        // 历史记录管理
+        function saveToHistory(config, result) {
+            const history = JSON.parse(localStorage.getItem('backtestHistory') || '[]');
+            
+            const record = {
+                id: Date.now(),
+                timestamp: new Date().toLocaleString('zh-CN'),
+                config: config,
+                metrics: result.metrics,
+                rebalanceCount: result.rebalanceLog.length
+            };
+            
+            history.unshift(record); // 添加到开头
+            
+            // 最多保存20条记录
+            if (history.length > 20) {
+                history.pop();
+            }
+            
+            localStorage.setItem('backtestHistory', JSON.stringify(history));
+        }
+        
+        function loadHistory() {
+            return JSON.parse(localStorage.getItem('backtestHistory') || '[]');
+        }
+        
+        function deleteHistory(id) {
+            let history = loadHistory();
+            history = history.filter(item => item.id !== id);
+            localStorage.setItem('backtestHistory', JSON.stringify(history));
+            renderHistory();
+        }
+        
+        function loadHistoryConfig(id) {
+            const history = loadHistory();
+            const record = history.find(item => item.id === id);
+            
+            if (record) {
+                const config = record.config;
+                
+                // 加载配置到表单
+                document.getElementById('weight_nasdaq').value = config.weights.nasdaq100 * 100;
+                document.getElementById('weight_sp500').value = config.weights.sp500 * 100;
+                document.getElementById('weight_csi930955').value = config.weights.csi930955 * 100;
+                document.getElementById('weight_csi980092').value = config.weights.csi980092 * 100;
+                document.getElementById('weight_cnb00003').value = config.weights.cnb00003 * 100;
+                
+                document.getElementById('initial_capital').value = config.initialCapital;
+                document.getElementById('start_date').value = config.startDate.toISOString().split('T')[0];
+                document.getElementById('end_date').value = config.endDate.toISOString().split('T')[0];
+                document.getElementById('invest_years').value = config.investYears;
+                
+                document.getElementById('rebalance_mode').value = config.rebalanceMode;
+                toggleRebalanceOptions();
+                
+                if (config.rebalanceMode === 'periodic') {
+                    document.getElementById('rebalance_months').value = config.rebalanceMonths;
+                } else if (config.rebalanceMode === 'threshold') {
+                    document.getElementById('threshold_pct').value = config.thresholdPct * 100;
+                }
+                
+                updateTotal();
+                closeHistory();
+                
+                // 提示用户
+                alert('配置已加载，点击"开始回测"运行');
+            }
+        }
+        
+        function showHistory() {
+            renderHistory();
+            document.getElementById('historyModal').classList.add('show');
+        }
+        
+        function closeHistory() {
+            document.getElementById('historyModal').classList.remove('show');
+        }
+        
+        function updateHistoryBadge() {
+            const history = loadHistory();
+            const btn = document.getElementById('historyBtn');
+            if (history.length > 0) {
+                btn.textContent = `📚 历史记录 (${history.length})`;
+            } else {
+                btn.textContent = '📚 历史记录';
+            }
+        }
+        
+        function renderHistory() {
+            const history = loadHistory();
+            const listEl = document.getElementById('historyList');
+            const noHistoryEl = document.getElementById('noHistory');
+            
+            if (history.length === 0) {
+                listEl.innerHTML = '';
+                noHistoryEl.style.display = 'block';
+                return;
+            }
+            
+            noHistoryEl.style.display = 'none';
+            
+            const getWeightDesc = (weights) => {
+                const parts = [];
+                if (weights.nasdaq100 > 0) parts.push(`纳${(weights.nasdaq100*100).toFixed(0)}%`);
+                if (weights.sp500 > 0) parts.push(`标${(weights.sp500*100).toFixed(0)}%`);
+                if (weights.csi930955 > 0) parts.push(`红${(weights.csi930955*100).toFixed(0)}%`);
+                if (weights.csi980092 > 0) parts.push(`流${(weights.csi980092*100).toFixed(0)}%`);
+                if (weights.cnb00003 > 0) parts.push(`债${(weights.cnb00003*100).toFixed(0)}%`);
+                return parts.join(' + ');
+            };
+            
+            const getModeDesc = (config) => {
+                if (config.rebalanceMode === 'none') return '不再平衡';
+                if (config.rebalanceMode === 'periodic') return `定期(${config.rebalanceMonths}月)`;
+                return `阈值(${(config.thresholdPct*100).toFixed(0)}%)`;
+            };
+            
+            let html = '';
+            history.forEach((record, index) => {
+                html += `
+                    <div class="history-item">
+                        <div class="history-header">
+                            <div class="history-title">回测 #${history.length - index}</div>
+                            <div class="history-time">${record.timestamp}</div>
+                        </div>
+                        <div class="history-config">
+                            <strong>配置:</strong> ${getWeightDesc(record.config.weights)} | 
+                            ${getModeDesc(record.config)} | 
+                            定投${record.config.investYears}年
+                        </div>
+                        <div class="history-metrics">
+                            <div class="history-metric"><strong>收益:</strong> ${record.metrics.totalReturn.toFixed(2)}%</div>
+                            <div class="history-metric"><strong>年化:</strong> ${record.metrics.annualizedReturn.toFixed(2)}%</div>
+                            <div class="history-metric"><strong>回撤:</strong> ${record.metrics.maxDrawdown.toFixed(2)}%</div>
+                            <div class="history-metric"><strong>夏普:</strong> ${record.metrics.sharpe.toFixed(3)}</div>
+                            <div class="history-metric"><strong>索提诺:</strong> ${record.metrics.sortino.toFixed(3)}</div>
+                            <div class="history-metric"><strong>再平衡:</strong> ${record.rebalanceCount}次</div>
+                        </div>
+                        <div class="history-actions">
+                            <button class="btn-small btn-load" onclick="loadHistoryConfig(${record.id})">
+                                📥 加载配置
+                            </button>
+                            <button class="btn-small btn-delete" onclick="if(confirm('确定删除此记录?')) deleteHistory(${record.id})">
+                                🗑️ 删除
+                            </button>
+                        </div>
+                    </div>
+                `;
+            });
+            
+            listEl.innerHTML = html;
+        }
         
         // 更新权重总和
         function updateTotal() {
@@ -474,6 +778,12 @@
                 
                 // 显示结果
                 displayResults(result, config);
+                
+                // 保存到历史记录
+                saveToHistory(config, result);
+                
+                // 更新历史按钮显示
+                updateHistoryBadge();
                 
                 document.getElementById('loading').style.display = 'none';
                 document.getElementById('results').classList.add('show');
@@ -834,6 +1144,7 @@
         // 初始化
         updateTotal();
         toggleRebalanceOptions();
+        updateHistoryBadge();
     </script>
 </body>
 </html>
