@@ -1,0 +1,832 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ETF投资组合回测工具</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            overflow: hidden;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+        
+        .header h1 {
+            font-size: 2em;
+            margin-bottom: 10px;
+        }
+        
+        .content {
+            padding: 40px;
+        }
+        
+        .config-section {
+            background: #f8f9fa;
+            padding: 25px;
+            border-radius: 12px;
+            margin-bottom: 30px;
+        }
+        
+        .config-section h3 {
+            color: #667eea;
+            margin-bottom: 20px;
+        }
+        
+        .form-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+        
+        .form-group {
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .form-group label {
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #333;
+        }
+        
+        .form-group input,
+        .form-group select {
+            padding: 10px;
+            border: 2px solid #dee2e6;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: border-color 0.3s;
+        }
+        
+        .form-group input:focus,
+        .form-group select:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        
+        .weight-total {
+            text-align: right;
+            font-size: 18px;
+            font-weight: bold;
+            margin-top: 10px;
+        }
+        
+        .weight-total.valid {
+            color: #28a745;
+        }
+        
+        .weight-total.invalid {
+            color: #dc3545;
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 15px 40px;
+            border: none;
+            border-radius: 10px;
+            font-size: 18px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: transform 0.2s;
+            width: 100%;
+        }
+        
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.4);
+        }
+        
+        .btn-primary:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        
+        .results {
+            display: none;
+        }
+        
+        .results.show {
+            display: block;
+        }
+        
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin: 30px 0;
+        }
+        
+        .metric-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 20px;
+            border-radius: 12px;
+            color: white;
+            text-align: center;
+        }
+        
+        .metric-card h4 {
+            font-size: 14px;
+            opacity: 0.9;
+            margin-bottom: 10px;
+        }
+        
+        .metric-card .value {
+            font-size: 28px;
+            font-weight: bold;
+        }
+        
+        .metric-card .sub {
+            font-size: 12px;
+            opacity: 0.8;
+            margin-top: 5px;
+        }
+        
+        .chart-container {
+            position: relative;
+            height: 400px;
+            margin: 30px 0;
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+        
+        .asset-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+            background: white;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+        
+        .asset-table th {
+            background: #667eea;
+            color: white;
+            padding: 15px;
+            text-align: left;
+        }
+        
+        .asset-table td {
+            padding: 12px 15px;
+            border-bottom: 1px solid #f0f0f0;
+        }
+        
+        .asset-table tr:hover {
+            background: #f8f9fa;
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 40px;
+            font-size: 18px;
+            color: #667eea;
+        }
+        
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 20px auto;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .info-box {
+            background: #e7f3ff;
+            border-left: 4px solid #667eea;
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 8px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🎯 ETF投资组合回测工具</h1>
+            <p>自定义配置 · 智能回测 · 实时结果</p>
+        </div>
+        
+        <div class="content">
+            <!-- 配置区域 -->
+            <div class="config-section">
+                <h3>📊 投资配置</h3>
+                
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label>纳斯达克100 权重 (%)</label>
+                        <input type="number" id="weight_nasdaq" value="40" min="0" max="100" step="0.5" onchange="updateTotal()">
+                    </div>
+                    <div class="form-group">
+                        <label>标普500 权重 (%)</label>
+                        <input type="number" id="weight_sp500" value="20" min="0" max="100" step="0.5" onchange="updateTotal()">
+                    </div>
+                    <div class="form-group">
+                        <label>中证红利低波100 权重 (%)</label>
+                        <input type="number" id="weight_csi930955" value="20" min="0" max="100" step="0.5" onchange="updateTotal()">
+                    </div>
+                    <div class="form-group">
+                        <label>自由现金流指数 权重 (%)</label>
+                        <input type="number" id="weight_csi980092" value="20" min="0" max="100" step="0.5" onchange="updateTotal()">
+                    </div>
+                    <div class="form-group">
+                        <label>证金债指数 权重 (%)</label>
+                        <input type="number" id="weight_cnb00003" value="0" min="0" max="100" step="0.5" onchange="updateTotal()">
+                    </div>
+                </div>
+                
+                <div class="weight-total" id="weightTotal">总权重: 100%</div>
+            </div>
+            
+            <div class="config-section">
+                <h3>⚙️ 回测参数</h3>
+                
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label>初始资金（元）</label>
+                        <input type="number" id="initial_capital" value="1000000" min="10000" step="10000">
+                    </div>
+                    <div class="form-group">
+                        <label>开始日期</label>
+                        <input type="date" id="start_date" value="2015-01-05">
+                    </div>
+                    <div class="form-group">
+                        <label>结束日期</label>
+                        <input type="date" id="end_date" value="2025-10-29">
+                    </div>
+                    <div class="form-group">
+                        <label>定投年限</label>
+                        <input type="number" id="invest_years" value="2" min="0" max="10" step="0.5">
+                    </div>
+                </div>
+            </div>
+            
+            <div class="config-section">
+                <h3>🔄 再平衡策略</h3>
+                
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label>再平衡模式</label>
+                        <select id="rebalance_mode" onchange="toggleRebalanceOptions()">
+                            <option value="none">不再平衡</option>
+                            <option value="periodic">定期再平衡</option>
+                            <option value="threshold" selected>阈值触发再平衡</option>
+                        </select>
+                    </div>
+                    <div class="form-group" id="periodic_option" style="display:none;">
+                        <label>再平衡频率（月）</label>
+                        <input type="number" id="rebalance_months" value="6" min="1" max="24">
+                    </div>
+                    <div class="form-group" id="threshold_option">
+                        <label>相对阈值（%）</label>
+                        <input type="number" id="threshold_pct" value="20" min="5" max="50" step="5">
+                        <small style="color: #666; margin-top: 5px;">例如：20%权重资产，阈值=20%×20%=4%</small>
+                    </div>
+                </div>
+                
+                <div class="info-box">
+                    <strong>💡 提示：</strong> 相对阈值20%表示当资产偏离目标权重超过"目标×20%"时触发再平衡。
+                    例如40%的资产，阈值=8%，触发范围32%-48%。
+                </div>
+            </div>
+            
+            <button class="btn-primary" onclick="runBacktest()" id="runBtn">
+                🚀 开始回测
+            </button>
+            
+            <!-- 结果区域 -->
+            <div id="results" class="results">
+                <h2 style="margin: 40px 0 30px 0; color: #667eea;">📈 回测结果</h2>
+                
+                <div class="metrics-grid" id="metricsGrid"></div>
+                
+                <h3 style="margin: 30px 0 20px 0; color: #667eea;">净值走势</h3>
+                <div class="chart-container">
+                    <canvas id="valueChart"></canvas>
+                </div>
+                
+                <h3 style="margin: 30px 0 20px 0; color: #667eea;">收益率走势</h3>
+                <div class="chart-container">
+                    <canvas id="returnChart"></canvas>
+                </div>
+                
+                <h3 style="margin: 30px 0 20px 0; color: #667eea;">各资产表现</h3>
+                <table class="asset-table" id="assetTable">
+                    <thead>
+                        <tr>
+                            <th>资产</th>
+                            <th>目标权重</th>
+                            <th>实际权重</th>
+                            <th>当前市值</th>
+                            <th>利润贡献</th>
+                            <th>价格涨幅</th>
+                        </tr>
+                    </thead>
+                    <tbody id="assetTableBody"></tbody>
+                </table>
+                
+                <div id="rebalanceInfo"></div>
+            </div>
+            
+            <!-- 加载提示 -->
+            <div id="loading" class="loading" style="display:none;">
+                <div class="spinner"></div>
+                <p>正在回测中，请稍候...</p>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        // 全局变量
+        let dataCache = {};
+        let currentChart1 = null;
+        let currentChart2 = null;
+        
+        // 更新权重总和
+        function updateTotal() {
+            const weights = [
+                parseFloat(document.getElementById('weight_nasdaq').value) || 0,
+                parseFloat(document.getElementById('weight_sp500').value) || 0,
+                parseFloat(document.getElementById('weight_csi930955').value) || 0,
+                parseFloat(document.getElementById('weight_csi980092').value) || 0,
+                parseFloat(document.getElementById('weight_cnb00003').value) || 0
+            ];
+            
+            const total = weights.reduce((a, b) => a + b, 0);
+            const totalEl = document.getElementById('weightTotal');
+            totalEl.textContent = `总权重: ${total.toFixed(1)}%`;
+            
+            if (Math.abs(total - 100) < 0.1) {
+                totalEl.className = 'weight-total valid';
+                document.getElementById('runBtn').disabled = false;
+            } else {
+                totalEl.className = 'weight-total invalid';
+                document.getElementById('runBtn').disabled = true;
+            }
+        }
+        
+        // 切换再平衡选项
+        function toggleRebalanceOptions() {
+            const mode = document.getElementById('rebalance_mode').value;
+            document.getElementById('periodic_option').style.display = 
+                mode === 'periodic' ? 'block' : 'none';
+            document.getElementById('threshold_option').style.display = 
+                mode === 'threshold' ? 'block' : 'none';
+        }
+        
+        // 加载CSV数据
+        async function loadData(filename) {
+            if (dataCache[filename]) {
+                return dataCache[filename];
+            }
+            
+            return new Promise((resolve, reject) => {
+                Papa.parse(`../data/processed/${filename}`, {
+                    download: true,
+                    header: true,
+                    dynamicTyping: true,
+                    complete: function(results) {
+                        const data = results.data.filter(row => row.Date);
+                        dataCache[filename] = data;
+                        resolve(data);
+                    },
+                    error: function(error) {
+                        reject(error);
+                    }
+                });
+            });
+        }
+        
+        // 主回测函数
+        async function runBacktest() {
+            document.getElementById('loading').style.display = 'block';
+            document.getElementById('results').classList.remove('show');
+            
+            try {
+                // 获取配置
+                const config = {
+                    weights: {
+                        nasdaq100: parseFloat(document.getElementById('weight_nasdaq').value) / 100,
+                        sp500: parseFloat(document.getElementById('weight_sp500').value) / 100,
+                        csi930955: parseFloat(document.getElementById('weight_csi930955').value) / 100,
+                        csi980092: parseFloat(document.getElementById('weight_csi980092').value) / 100,
+                        cnb00003: parseFloat(document.getElementById('weight_cnb00003').value) / 100
+                    },
+                    initialCapital: parseFloat(document.getElementById('initial_capital').value),
+                    startDate: new Date(document.getElementById('start_date').value),
+                    endDate: new Date(document.getElementById('end_date').value),
+                    investYears: parseFloat(document.getElementById('invest_years').value),
+                    rebalanceMode: document.getElementById('rebalance_mode').value,
+                    rebalanceMonths: parseInt(document.getElementById('rebalance_months').value),
+                    thresholdPct: parseFloat(document.getElementById('threshold_pct').value) / 100
+                };
+                
+                // 加载数据
+                const datasets = {};
+                for (let key in config.weights) {
+                    if (config.weights[key] > 0) {
+                        const filename = key === 'nasdaq100' ? 'nasdaq100_normalized.csv' :
+                                       key === 'sp500' ? 'sp500_normalized.csv' :
+                                       key === 'csi930955' ? '930955_normalized.csv' :
+                                       key === 'csi980092' ? '980092_normalized.csv' :
+                                       'CNB00003_normalized.csv';
+                        datasets[key] = await loadData(filename);
+                    }
+                }
+                
+                // 执行回测
+                const result = performBacktest(config, datasets);
+                
+                // 显示结果
+                displayResults(result, config);
+                
+                document.getElementById('loading').style.display = 'none';
+                document.getElementById('results').classList.add('show');
+                
+            } catch (error) {
+                alert('回测出错: ' + error.message);
+                console.error(error);
+                document.getElementById('loading').style.display = 'none';
+            }
+        }
+        
+        // 执行回测计算
+        function performBacktest(config, datasets) {
+            // 对齐日期
+            let commonDates = new Set(datasets[Object.keys(datasets)[0]].map(d => d.Date));
+            for (let key in datasets) {
+                const dates = new Set(datasets[key].map(d => d.Date));
+                commonDates = new Set([...commonDates].filter(d => dates.has(d)));
+            }
+            
+            // 转换为数组并排序
+            let dates = Array.from(commonDates)
+                .filter(d => {
+                    const date = new Date(d);
+                    return date >= config.startDate && date <= config.endDate;
+                })
+                .sort();
+            
+            // 过滤数据
+            const filteredData = {};
+            for (let key in datasets) {
+                filteredData[key] = datasets[key].filter(row => dates.includes(row.Date));
+            }
+            
+            // 初始化
+            const initialInvest = config.initialCapital * 0.2;
+            const remaining = config.initialCapital - initialInvest;
+            const investEndDate = new Date(dates[0]);
+            investEndDate.setFullYear(investEndDate.getFullYear() + config.investYears);
+            
+            const investDates = dates.filter(d => new Date(d) <= investEndDate);
+            const dailyInvest = remaining / investDates.length;
+            
+            // 初始化持仓
+            const shares = {};
+            const portfolio = [];
+            const rebalanceLog = [];
+            
+            for (let key in config.weights) {
+                if (config.weights[key] > 0) {
+                    const initialPrice = filteredData[key][0].Close;
+                    shares[key] = (initialInvest * config.weights[key]) / initialPrice;
+                } else {
+                    shares[key] = 0;
+                }
+            }
+            
+            // 模拟交易
+            for (let i = 0; i < dates.length; i++) {
+                const date = dates[i];
+                const currentDate = new Date(date);
+                
+                if (i > 0) {
+                    // 定投期
+                    if (currentDate <= investEndDate) {
+                        for (let key in config.weights) {
+                            if (config.weights[key] > 0) {
+                                const price = filteredData[key][i].Close;
+                                shares[key] += (dailyInvest * config.weights[key]) / price;
+                            }
+                        }
+                    } else {
+                        // 检查再平衡
+                        if (config.rebalanceMode === 'threshold') {
+                            const totalValue = Object.keys(shares).reduce((sum, key) => {
+                                return config.weights[key] > 0 ? 
+                                    sum + shares[key] * filteredData[key][i].Close : sum;
+                            }, 0);
+                            
+                            let needRebalance = false;
+                            let reasons = [];
+                            
+                            for (let key in config.weights) {
+                                if (config.weights[key] > 0) {
+                                    const currentValue = shares[key] * filteredData[key][i].Close;
+                                    const currentWeight = currentValue / totalValue;
+                                    const targetWeight = config.weights[key];
+                                    const threshold = targetWeight * config.thresholdPct;
+                                    
+                                    if (Math.abs(currentWeight - targetWeight) > threshold) {
+                                        needRebalance = true;
+                                        reasons.push(`${key}: ${(currentWeight*100).toFixed(1)}%`);
+                                    }
+                                }
+                            }
+                            
+                            if (needRebalance) {
+                                // 执行再平衡
+                                for (let key in config.weights) {
+                                    if (config.weights[key] > 0) {
+                                        const targetValue = totalValue * config.weights[key];
+                                        shares[key] = targetValue / filteredData[key][i].Close;
+                                    }
+                                }
+                                rebalanceLog.push({ date, reasons: reasons.join(', ') });
+                            }
+                        } else if (config.rebalanceMode === 'periodic') {
+                            // 定期再平衡（简化实现：每N个月）
+                            const monthsSinceInvest = (currentDate - investEndDate) / (1000 * 60 * 60 * 24 * 30);
+                            if (monthsSinceInvest > 0 && monthsSinceInvest % config.rebalanceMonths < 0.5) {
+                                const totalValue = Object.keys(shares).reduce((sum, key) => {
+                                    return config.weights[key] > 0 ? 
+                                        sum + shares[key] * filteredData[key][i].Close : sum;
+                                }, 0);
+                                
+                                for (let key in config.weights) {
+                                    if (config.weights[key] > 0) {
+                                        const targetValue = totalValue * config.weights[key];
+                                        shares[key] = targetValue / filteredData[key][i].Close;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+                
+                // 记录当日组合价值
+                let totalValue = 0;
+                const assetValues = {};
+                for (let key in config.weights) {
+                    if (config.weights[key] > 0) {
+                        const value = shares[key] * filteredData[key][i].Close;
+                        assetValues[key] = value;
+                        totalValue += value;
+                    }
+                }
+                
+                const cumulativeInvest = currentDate <= investEndDate ?
+                    initialInvest + dailyInvest * (i + 1) : config.initialCapital;
+                
+                portfolio.push({
+                    date,
+                    totalValue,
+                    assetValues,
+                    returnPct: (totalValue / config.initialCapital - 1) * 100,
+                    profit: totalValue - cumulativeInvest
+                });
+            }
+            
+            // 计算指标
+            const finalValue = portfolio[portfolio.length - 1].totalValue;
+            const totalReturn = portfolio[portfolio.length - 1].returnPct;
+            
+            const years = (new Date(dates[dates.length - 1]) - new Date(dates[0])) / (365.25 * 24 * 60 * 60 * 1000);
+            const annualizedReturn = (Math.pow(finalValue / config.initialCapital, 1/years) - 1) * 100;
+            
+            // 计算最大回撤
+            let maxDrawdown = 0;
+            let peak = portfolio[0].totalValue;
+            for (let p of portfolio) {
+                if (p.totalValue > peak) peak = p.totalValue;
+                const dd = (p.totalValue - peak) / peak * 100;
+                if (dd < maxDrawdown) maxDrawdown = dd;
+            }
+            
+            // 计算波动率
+            const returns = [];
+            for (let i = 1; i < portfolio.length; i++) {
+                returns.push(portfolio[i].totalValue / portfolio[i-1].totalValue - 1);
+            }
+            const volatility = Math.sqrt(returns.reduce((sum, r) => sum + r*r, 0) / returns.length) * Math.sqrt(252) * 100;
+            
+            // 下行波动
+            const downsideReturns = returns.filter(r => r < 0);
+            const downsideVol = Math.sqrt(downsideReturns.reduce((sum, r) => sum + r*r, 0) / downsideReturns.length) * Math.sqrt(252) * 100;
+            
+            // 夏普和索提诺
+            const sharpe = (annualizedReturn / 100 - 0.03) / (volatility / 100);
+            const sortino = (annualizedReturn / 100 - 0.03) / (downsideVol / 100);
+            
+            return {
+                portfolio,
+                metrics: {
+                    finalValue,
+                    totalReturn,
+                    annualizedReturn,
+                    maxDrawdown,
+                    volatility,
+                    downsideVol,
+                    sharpe,
+                    sortino,
+                    years
+                },
+                rebalanceLog,
+                dates,
+                filteredData,
+                shares
+            };
+        }
+        
+        // 显示结果
+        function displayResults(result, config) {
+            const { portfolio, metrics, rebalanceLog, dates, filteredData, shares } = result;
+            
+            // 显示指标卡片
+            const metricsHTML = `
+                <div class="metric-card">
+                    <h4>总收益率</h4>
+                    <div class="value">${metrics.totalReturn.toFixed(2)}%</div>
+                    <div class="sub">年化 ${metrics.annualizedReturn.toFixed(2)}%</div>
+                </div>
+                <div class="metric-card">
+                    <h4>最终市值</h4>
+                    <div class="value">¥${(metrics.finalValue/10000).toFixed(1)}万</div>
+                    <div class="sub">投资 ${metrics.years.toFixed(2)} 年</div>
+                </div>
+                <div class="metric-card">
+                    <h4>最大回撤</h4>
+                    <div class="value">${metrics.maxDrawdown.toFixed(2)}%</div>
+                    <div class="sub">波动率 ${metrics.volatility.toFixed(2)}%</div>
+                </div>
+                <div class="metric-card">
+                    <h4>夏普比率</h4>
+                    <div class="value">${metrics.sharpe.toFixed(3)}</div>
+                    <div class="sub">综合性价比</div>
+                </div>
+                <div class="metric-card">
+                    <h4>索提诺比率</h4>
+                    <div class="value">${metrics.sortino.toFixed(3)}</div>
+                    <div class="sub">下行风险 ${metrics.downsideVol.toFixed(2)}%</div>
+                </div>
+            `;
+            document.getElementById('metricsGrid').innerHTML = metricsHTML;
+            
+            // 绘制净值图
+            if (currentChart1) currentChart1.destroy();
+            currentChart1 = new Chart(document.getElementById('valueChart'), {
+                type: 'line',
+                data: {
+                    labels: portfolio.map(p => p.date),
+                    datasets: [{
+                        label: '投资组合净值',
+                        data: portfolio.map(p => p.totalValue),
+                        borderColor: 'rgba(102, 126, 234, 1)',
+                        backgroundColor: 'rgba(102, 126, 234, 0.1)',
+                        borderWidth: 2,
+                        tension: 0.4,
+                        fill: true
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                callback: value => '¥' + (value/10000).toFixed(0) + '万'
+                            }
+                        }
+                    }
+                }
+            });
+            
+            // 绘制收益率图
+            if (currentChart2) currentChart2.destroy();
+            currentChart2 = new Chart(document.getElementById('returnChart'), {
+                type: 'line',
+                data: {
+                    labels: portfolio.map(p => p.date),
+                    datasets: [{
+                        label: '累计收益率',
+                        data: portfolio.map(p => p.returnPct),
+                        borderColor: 'rgba(118, 75, 162, 1)',
+                        backgroundColor: 'rgba(118, 75, 162, 0.1)',
+                        borderWidth: 2,
+                        tension: 0.4,
+                        fill: true
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        y: {
+                            ticks: {
+                                callback: value => value.toFixed(0) + '%'
+                            }
+                        }
+                    }
+                }
+            });
+            
+            // 资产表现表格
+            const assetNames = {
+                nasdaq100: '纳斯达克100',
+                sp500: '标普500',
+                csi930955: '中证红利低波100',
+                csi980092: '自由现金流指数',
+                cnb00003: '证金债指数'
+            };
+            
+            let assetHTML = '';
+            const lastPortfolio = portfolio[portfolio.length - 1];
+            
+            for (let key in config.weights) {
+                if (config.weights[key] > 0) {
+                    const currentValue = lastPortfolio.assetValues[key];
+                    const currentWeight = currentValue / lastPortfolio.totalValue * 100;
+                    const targetWeight = config.weights[key] * 100;
+                    
+                    const initialPrice = filteredData[key][0].Close;
+                    const finalPrice = filteredData[key][filteredData[key].length - 1].Close;
+                    const priceReturn = (finalPrice / initialPrice - 1) * 100;
+                    
+                    const initialValue = shares[key] * initialPrice;
+                    const profit = currentValue - initialValue;
+                    
+                    assetHTML += `
+                        <tr>
+                            <td><strong>${assetNames[key]}</strong></td>
+                            <td>${targetWeight.toFixed(1)}%</td>
+                            <td>${currentWeight.toFixed(2)}%</td>
+                            <td>¥${(currentValue/10000).toFixed(1)}万</td>
+                            <td>¥${(profit/10000).toFixed(1)}万</td>
+                            <td>${priceReturn.toFixed(2)}%</td>
+                        </tr>
+                    `;
+                }
+            }
+            document.getElementById('assetTableBody').innerHTML = assetHTML;
+            
+            // 再平衡信息
+            if (rebalanceLog.length > 0) {
+                let rebalanceHTML = '<h3 style="margin: 30px 0 20px 0; color: #667eea;">🔄 再平衡记录</h3>';
+                rebalanceHTML += '<div class="info-box">';
+                rebalanceHTML += `<p><strong>再平衡次数: ${rebalanceLog.length}次</strong></p><ul style="margin-top: 10px;">`;
+                rebalanceLog.forEach(log => {
+                    rebalanceHTML += `<li>${log.date}: ${log.reasons}</li>`;
+                });
+                rebalanceHTML += '</ul></div>';
+                document.getElementById('rebalanceInfo').innerHTML = rebalanceHTML;
+            } else {
+                document.getElementById('rebalanceInfo').innerHTML = '<div class="info-box">未触发再平衡</div>';
+            }
+        }
+        
+        // 初始化
+        updateTotal();
+        toggleRebalanceOptions();
+    </script>
+</body>
+</html>
+
