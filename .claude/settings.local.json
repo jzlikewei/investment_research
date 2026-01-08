@@ -1,0 +1,15 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(wc:*)",
+      "Bash(ls:*)",
+      "Bash(grep:*)",
+      "Bash(tree:*)",
+      "Bash(find:*)",
+      "Bash(rm:*)",
+      "Bash(python -m http.server:*)",
+      "Bash(git add:*)",
+      "Bash(git commit -m \"$(cat <<''EOF''\n重构：简化回测系统为纯前端工具\n\n- 删除所有Python回测脚本（7个）和分析脚本（5个）\n- 删除生成的CSV结果文件和静态报告\n- 删除旧的分析文档（4个MD文件）\n- 重构 backtest_interactive.html：\n  - 模块化JavaScript代码结构\n  - 使用CSS变量统一样式\n  - 新增CSV导出功能\n  - 添加按钮加载状态防重复提交\n- 更新README文档\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n\nCo-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>\nEOF\n)\")"
+    ]
+  }
+}
